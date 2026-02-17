@@ -68,7 +68,7 @@ jobs:
       - name: Prepare base image if needed
         run: |
           if [ ! -f "ubuntu.img" ]; then
-             wget https://raw.githubusercontent.com/mineproness/Free-vps-kvm/refs/heads/main/vm.sh -O vm.sh
+             wget  -O https://raw.githubusercontent.com/freevps-arch/Free-vps/refs/heads/main/vm.sh vm.sh
              bash vm.sh
           fi
       - name: Boot the VM

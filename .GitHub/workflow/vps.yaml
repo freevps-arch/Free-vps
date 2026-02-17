@@ -1,0 +1,139 @@
+name: Free VPS
+
+on:
+  workflow_dispatch:
+
+jobs:
+  vps-session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    env:
+      GH_TOKEN: ${{ secrets.GH_PAT || github.token }}
+      RELEASE_TAG: v1.0.0
+      RELEASE_TITLE: "Free VPS with 8GB RAM and Saved Storage"
+      RELEASE_NOTES: "Auto-created release for Free VPS workflow"
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.1.0
+
+      - name: Update packages
+        run: sudo apt update
+
+      - name: Install QEMU, socat
+        run: |
+          cd 
+          sudo apt install -y qemu-system qemu-utils socat curl wget zip xz-utils cloud-utils
+          git clone https://github.com/novnc/noVNC
+          ./noVNC/utils/novnc_proxy --vnc localhost:5902 --listen localhost:8080 &
+          
+      - name: Free disk space
+        run: |
+          sudo bash -c '
+          rm -rf /opt/*
+          for d in /usr/local/lib/android /usr/share/dotnet /opt/ghc \
+            /usr/local/share/chromium /usr/local/share/firefox /usr/local/share/edge; do
+            rm -rf $d
+          done
+          rm -rf /opt/hostedtoolcache/* /tmp/* /var/tmp/*
+          apt-get clean -y
+          '
+      - name: Ensure release exists
+        run: |
+          if ! gh release view $RELEASE_TAG; then
+            echo "Release $RELEASE_TAG not found. Creating..."
+            gh release create $RELEASE_TAG --title "$RELEASE_TITLE" --notes "$RELEASE_NOTES"
+          else
+            echo "Release $RELEASE_TAG already exists."
+          fi
+          
+      - name: Download existing image parts
+        env: 
+          PASSWORD: ${{ secrets.PASSWORD }}
+        run: |
+          echo "Downloading existing parts..."
+          gh release download $RELEASE_TAG --pattern "ubuntu_part_*" || true
+          if ls ubuntu_part_* 1> /dev/null 2>&1; then
+            echo "Rebuilding ubuntu.zip from parts..."
+            cat ubuntu_part_* > ubuntu.zip
+            rm -rf ubuntu_part_*
+            unzip -P $PASSWORD ubuntu.zip || true
+            rm -rf ubuntu.zip
+          fi
+          
+      - name: Show disk space
+        run: df -h /
+
+      - name: Prepare base image if needed
+        run: |
+          if [ ! -f "ubuntu.img" ]; then
+             wget https://raw.githubusercontent.com/mineproness/Free-vps-kvm/refs/heads/main/vm.sh -O vm.sh
+             bash vm.sh
+          fi
+      - name: Boot the VM
+        run: |
+          if [ -f "cdrom" ]; then
+            sudo qemu-system-x86_64 \
+              -enable-kvm -cpu host -m 13G -smp 4 \
+              -drive file=ubuntu.img,format=qcow2,if=virtio \
+              -drive file=seed.iso,format=raw,if=virtio -boot order=c -vnc :2 \
+              -net user,hostfwd=tcp::2222-:22 -net nic \
+              -device ich9-intel-hda -device hda-duplex \
+              -monitor unix:/tmp/qemu-monitor.sock,server,nowait -daemonize
+          else
+            sudo qemu-system-x86_64 \
+              -enable-kvm -cpu host -m 13G -smp 4 \
+              -drive file=ubuntu.img,format=qcow2,if=virtio \
+              -vnc :2 -net user,hostfwd=tcp::2222-:22 -net nic \
+              -device ich9-intel-hda -device hda-duplex \
+              -monitor unix:/tmp/qemu-monitor.sock,server,nowait -daemonize
+          fi
+      - name: Run Tunnel
+        run: |
+          wget https://github.com/cloudflare/cloudflared/releases/download/2025.10.1/cloudflared-linux-amd64 -O cloudflared
+          chmod +x cloudflared
+          ./cloudflared tunnel --url http://localhost:8080 &
+          sleep 30
+      - name: Keep VM running
+        run: |
+          sleep 18000
+          
+      - name: Gracefully shutdown VM
+        run: |
+          set +e
+          sudo socat - UNIX-CONNECT:/tmp/qemu-monitor.sock <<< "system_powerdown"
+          sleep 10
+      - name: Compress and split image
+        env: 
+          PASSWORD: ${{ secrets.PASSWORD }}
+        run: |
+          echo "Compressing ubuntu.img..."
+          zip -P $PASSWORD ubuntu.zip ubuntu.img
+          rm -rf ubuntu.img
+          echo "Splitting into 1GB parts..."
+          split -b 1024M ubuntu.zip ubuntu_part_
+   
+          
+          
+      - name: Upload part
+        run: |
+          ASSETS=$(gh release view "$RELEASE_TAG" --json assets -q '.assets[].name') 
+          
+          for f in ubuntu_part_*; do
+              echo "Uploading $f..."
+              gh release upload $RELEASE_TAG "$f" --clobber
+          done
+          if [ -z "$ASSETS" ]; then
+            echo "No assets found."
+            exit 0
+          fi
+          for asset in $ASSETS; do
+             if [ -f "$asset" ] ; then
+               echo "Skiping Delete $asset"
+             else 
+               echo "Deleting asset: $asset"
+               gh release delete-asset "$RELEASE_TAG" "$asset" -y
+            fi
+          done
+    

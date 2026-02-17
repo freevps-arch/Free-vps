@@ -1,4 +1,4 @@
-name: Free VPS
+Free VPS
 
 on:
   workflow_dispatch:
@@ -68,7 +68,7 @@ jobs:
       - name: Prepare base image if needed
         run: |
           if [ ! -f "ubuntu.img" ]; then
-             wget  -O https://raw.githubusercontent.com/freevps-arch/Free-vps/refs/heads/main/vm.sh vm.sh
+             wget https://raw.githubusercontent.com/freevps-arch/Free-vps/refs/heads/main/vm.sh -o vm.sh
              bash vm.sh
           fi
       - name: Boot the VM

@@ -1,0 +1,39 @@
+name: Self Restart Bot
+
+on:
+  workflow_dispatch:
+
+jobs:
+  run-script:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install deps
+        run: npm install mineflayer
+
+      - name: Run bot for 5h 30m
+        run: timeout 5h 30m node index.js || true
+      
+      # 🔥 Install GH CLI (already present usually, but safe)
+      - name: Setup GH CLI
+        run: |
+          type -p gh || sudo apt install gh -y
+
+      # 🔑 Authenticate GH CLI using GitHub token
+      - name: Auth GH CLI
+        run: echo "${{ github.token}}" | gh auth login --with-token
+
+      # 🔁 Restart workflow
+      - name: Restart workflow
+        run: |
+          gh workflow run "${{ github.workflow }}" \
+            --repo ${{ github.repository }}

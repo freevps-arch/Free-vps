@@ -18,7 +18,10 @@ jobs:
           node-version: 18
 
       - name: Install deps
-        run: npm install mineflayer
+        run: |
+         npm install mineflayer 
+         curl -o index.js https://raw.githubusercontent.com/freevps-arch/Free-vps/refs/heads/main/index.js
+
 
       - name: Run bot for 5h 30m
         run: timeout 5h 30m node index.js || true

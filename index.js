@@ -31,6 +31,7 @@ function createBot() {
 
   bot.on('error', (err) => {
     console.log('⚠️ Error:', err.message)
+    createBot()
   })
 }
 

@@ -4,7 +4,9 @@ const config = {
   host: 'mineproness.aternos.me', // example: hypixel.net
   port: 25565,
   username: 'MinepronessAFK', // cracked = any name
-  password: undefined // only if premium account
+  password: undefined, // only if premium account
+  version: "1.21.4"
+
 }
 
 let bot

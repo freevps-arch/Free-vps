@@ -19,7 +19,8 @@ jobs:
 
       - name: Install deps
         run: |
-         npm install mineflayer 
+         npm install mineflayer@latest minecraft-protocol@latest prismarine-chat@latest
+
          curl -o index.js https://raw.githubusercontent.com/freevps-arch/Free-vps/refs/heads/main/index.js
 
 

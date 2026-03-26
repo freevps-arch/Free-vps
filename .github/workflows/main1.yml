@@ -24,7 +24,10 @@ jobs:
 
 
       - name: Run bot for 5h 30m
-        run: timeout 5h30m node index.js || true
+        run: |
+         node index.js 
+         sleep 1800
+
       
       # 🔥 Install GH CLI (already present usually, but safe)
       - name: Setup GH CLI

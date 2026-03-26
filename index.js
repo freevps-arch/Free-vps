@@ -5,7 +5,7 @@ const config = {
   port: 25565,
   username: 'MinepronessAFK', // cracked = any name
   password: undefined, // only if premium account
-  version: "1.21.4"
+  version: "1.21.11"
 
 }
 

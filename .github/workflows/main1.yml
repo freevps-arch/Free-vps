@@ -26,7 +26,7 @@ jobs:
 
       - name: Run bot for 5h 30m
         run: |
-         node index.js 
+         node index.js &
          sleep 1800
 
       
